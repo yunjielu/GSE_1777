@@ -16,6 +16,8 @@
 //////////////////////////////////////////////////////////////////////////
 // AGSE_1777Character
 
+DEFINE_LOG_CATEGORY(LogGSE_1777Character);
+
 AGSE_1777Character::AGSE_1777Character(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -81,6 +83,8 @@ void AGSE_1777Character::SetupPlayerInputComponent(class UInputComponent* Player
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AGSE_1777Character::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &AGSE_1777Character::TouchStopped);
+
+	PlayerInputComponent->BindAction("1", IE_Pressed, this, &AGSE_1777Character::ServerIncreaseVariables);
 }
 
 void AGSE_1777Character::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -133,3 +137,42 @@ void AGSE_1777Character::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
+
+void AGSE_1777Character::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	DOREPLIFETIME_CONDITION(AGSE_1777Character, ReplicateIntInitialOnly, COND_InitialOnly);
+	DOREPLIFETIME(AGSE_1777Character, ReplicateInt);
+}
+
+void AGSE_1777Character::OnRep_ReplicateIntInitialOnly()
+{
+	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
+}
+
+void AGSE_1777Character::OnRep_ReplicateInt()
+{
+	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
+}
+
+void AGSE_1777Character::ServerIncreaseVariables_Implementation()
+{
+	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
+
+	ReplicateInt++;
+	ReplicateIntInitialOnly++;
+}
+
+/*
+bool AGSE_1777Character::IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const
+{
+	if (const AGSE_1777Character* Char = Cast<AGSE_1777Character>(ViewTarget))
+	{
+		if (Char->ReplicateInt - 1 == this->ReplicateInt)
+		{
+			return false;
+		}
+	}
+
+	return Super::IsNetRelevantFor(RealViewer, ViewTarget, SrcLocation);
+}
+*/

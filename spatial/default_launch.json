@@ -1,5 +1,5 @@
 {
-  "template": "w4_r1000_e10",
+  "template": "s5large16_std50_action1g1",
   "world": {
     "dimensions": {
       "x_meters": 2000,
