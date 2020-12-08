@@ -1,0 +1,16 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{CD4AEE03-4609-4ABB-6DAB-318934C9D0D3}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "GSE_1777",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	]
+}
