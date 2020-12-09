@@ -140,6 +140,8 @@ void AGSE_1777Character::MoveRight(float Value)
 
 void AGSE_1777Character::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
 	DOREPLIFETIME_CONDITION(AGSE_1777Character, ReplicateIntInitialOnly, COND_InitialOnly);
 	DOREPLIFETIME(AGSE_1777Character, ReplicateInt);
 }
