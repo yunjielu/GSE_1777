@@ -13,6 +13,8 @@
 
 #include "UnrealNetwork.h"
 
+#include "DummyCharacter.h"
+
 //////////////////////////////////////////////////////////////////////////
 // AGSE_1777Character
 
@@ -84,7 +86,8 @@ void AGSE_1777Character::SetupPlayerInputComponent(class UInputComponent* Player
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AGSE_1777Character::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &AGSE_1777Character::TouchStopped);
 
-	PlayerInputComponent->BindAction("1", IE_Pressed, this, &AGSE_1777Character::ServerIncreaseVariables);
+	PlayerInputComponent->BindAction("1", IE_Pressed, this, &AGSE_1777Character::ServerSpawnDummyCharacter);
+	PlayerInputComponent->BindAction("2", IE_Pressed, this, &AGSE_1777Character::ServerIncreaseVariables);
 }
 
 void AGSE_1777Character::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -138,43 +141,89 @@ void AGSE_1777Character::MoveRight(float Value)
 	}
 }
 
-void AGSE_1777Character::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME_CONDITION(AGSE_1777Character, ReplicateIntInitialOnly, COND_InitialOnly);
-	DOREPLIFETIME(AGSE_1777Character, ReplicateInt);
-}
-
-void AGSE_1777Character::OnRep_ReplicateIntInitialOnly()
-{
-	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
-}
-
-void AGSE_1777Character::OnRep_ReplicateInt()
-{
-	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
-}
-
 void AGSE_1777Character::ServerIncreaseVariables_Implementation()
 {
 	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
 
-	ReplicateInt++;
-	ReplicateIntInitialOnly++;
+	for (TObjectIterator<ADummyCharacter> It; It; ++It)
+	{
+		ADummyCharacter* Node = *It;
+		Node->ReplicateInt++;
+		Node->ReplicateIntInitialOnly++;
+	}
 }
 
-/*
-bool AGSE_1777Character::IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const
+void AGSE_1777Character::ServerSpawnDummyCharacter_Implementation()
 {
-	if (const AGSE_1777Character* Char = Cast<AGSE_1777Character>(ViewTarget))
+	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
+
+	FVector location = GetActorLocation();
+	location.Z += 100;
+	GetWorld()->SpawnActor<ADummyCharacter>(ADummyCharacter::StaticClass(), location, FRotator::ZeroRotator);
+
+	int Count = 0;
+	for (TObjectIterator<ADummyCharacter> It; It; ++It)
 	{
-		if (Char->ReplicateInt - 1 == this->ReplicateInt)
-		{
-			return false;
-		}
+		Count++;
 	}
 
-	return Super::IsNetRelevantFor(RealViewer, ViewTarget, SrcLocation);
+	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s - TotalCount:[%d]"), *FString(__FUNCTION__), Count);
 }
-*/
+
+void AGSE_1777Character::ClientSendInitializeData_Implementation(const TArray<uint8>& data)
+{
+	UE_LOG(LogGSE_1777Character, Warning, TEXT("%s"), *FString(__FUNCTION__));
+
+	TMap<int64, ADummyCharacter*> EntityCharMap;
+	for (TObjectIterator<ADummyCharacter> It; It; ++It)
+	{
+		ADummyCharacter* DummyChar = *It;
+		int64 EntityId = USpatialStatics::GetActorEntityId(DummyChar);
+
+		EntityCharMap.Add(EntityId, DummyChar);
+	}
+
+	FBufferArchive Ar;
+	Ar.Append(data.GetData(), data.Num());
+
+	int16 count = 0;
+	Ar << count;
+
+	for (int i = 0; i < count; ++i)
+	{
+		int64 EntityId = -1;
+		Ar << EntityId;
+
+		auto It = EntityCharMap.Find(EntityId);
+		if (It != nullptr)
+		{
+			ADummyCharacter* DummyChar = *It;
+			DummyChar->DeserializeInitialOnlyData(Ar);
+		}
+	}
+}
+
+void AGSE_1777Character::OnAuthorityGained()
+{
+	Super::OnAuthorityGained();
+
+	TArray<uint8> InitializingData;
+	int16 count = 0;
+
+	for (TObjectIterator<ADummyCharacter> It; It; ++It)
+	{
+		FBufferArchive Ar;
+		ADummyCharacter* DummyChar = *It;
+		int64 EntityId = USpatialStatics::GetActorEntityId(DummyChar);
+
+		Ar << EntityId;
+		DummyChar->SerializeInitialOnlyData(Ar);
+		count++;
+
+		TArray<uint8>& TmpArray = *static_cast<TArray<uint8>*>(&Ar);
+		InitializingData.Append(TmpArray.GetData(), TmpArray.Num());
+	}
+
+	ClientSendInitializeData(InitializingData);
+}
+

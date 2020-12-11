@@ -4,6 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Archive.h"
+#include "BufferArchive.h"
+#include "Stream.h"
+#include "SpatialStatics.h"
 #include "GSE_1777Character.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGSE_1777Character, Log, All);
@@ -72,25 +76,15 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-public:
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
-	UFUNCTION()
-	void OnRep_ReplicateIntInitialOnly();
-
-	UFUNCTION()
-	void OnRep_ReplicateInt();
+	virtual void OnAuthorityGained() override;
 
 	UFUNCTION(Server, Reliable)
 	void ServerIncreaseVariables();
 
-	// virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const override;
+	UFUNCTION(Server, Reliable)
+	void ServerSpawnDummyCharacter();
 
-public:
-	UPROPERTY(ReplicatedUsing = OnRep_ReplicateIntInitialOnly)
-	int									ReplicateIntInitialOnly = 0;
-
-	UPROPERTY(ReplicatedUsing = OnRep_ReplicateInt)
-	int									ReplicateInt = 0;
+	UFUNCTION(Client, Reliable)
+	void ClientSendInitializeData(const TArray<uint8>& data);
 };
 
